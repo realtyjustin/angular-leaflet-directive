@@ -1,5 +1,6 @@
-angular.module("leaflet-directive").directive('markers',
-    function ($log, $rootScope, $q, leafletData, leafletHelpers, leafletMapDefaults, leafletMarkersHelpers,
+angular.module("leaflet-directive").directive('popups',
+    function ($log, $rootScope, $q, leafletData, leafletHelpers,
+              leafletMapDefaults, leafletPopupsHelpers,
               leafletEvents, leafletIterators) {
     //less terse vars to helpers
     var isDefined = leafletHelpers.isDefined,
@@ -7,15 +8,15 @@ angular.module("leaflet-directive").directive('markers',
         defaultTo= leafletHelpers.defaultTo,
         Helpers = leafletHelpers,
         isString = leafletHelpers.isString,
-        addMarkerWatcher = leafletMarkersHelpers.addMarkerWatcher,
-        listenMarkerEvents = leafletMarkersHelpers.listenMarkerEvents,
-        addMarkerToGroup = leafletMarkersHelpers.addMarkerToGroup,
+        addMarkerWatcher = leafletPopupsHelpers.addMarkerWatcher,
+        listenMarkerEvents = leafletPopupsHelpers.listenMarkerEvents,
+        addMarkerToGroup = leafletPopupsHelpers.addMarkerToGroup,
         bindMarkerEvents = leafletEvents.bindMarkerEvents,
-        createMarker = leafletMarkersHelpers.createMarker,
-        deleteMarker = leafletMarkersHelpers.deleteMarker,
+        createMarker = leafletPopupsHelpers.createMarker,
+        deleteMarker = leafletPopupsHelpers.deleteMarker,
         $it = leafletIterators;
 
-    var _maybeAddMarkerToLayer = function(layerName, layers, markerData, marker, shouldWatch, map){
+    var _maybeAddToLayer = function(layerName, layers, popupModel, marker, shouldWatch, map){
 
         if (!isString(layerName)) {
             $log.error(errorHeader + ' A layername must be a string');
@@ -42,84 +43,84 @@ angular.module("leaflet-directive").directive('markers',
 
         // The marker is automatically added to the map depending on the visibility
         // of the layer, so we only have to open the popup if the marker is in the map
-        if (!shouldWatch && map.hasLayer(marker) && markerData.focus === true) {
-            leafletMarkersHelpers.manageOpenPopup(marker, markerData);
+        if (!shouldWatch && map.hasLayer(marker) && popupModel.focus === true) {
+            leafletPopupsHelpers.manageOpenPopup(marker, popupModel);
         }
         return true;
     };
-    //TODO: move to leafletMarkersHelpers??? or make a new class/function file (leafletMarkersHelpers is large already)
-    var _addMarkers = function(markersToRender, map, layers, leafletMarkers, leafletScope, shouldWatch, maybeLayerName){
+
+    var _add = function(popupsToRender, map, layers, leafletPopups, leafletScope,
+      shouldWatch, maybeLayerName){
         shouldWatch = defaultTo(shouldWatch, false);
 
-        for (var newName in markersToRender) {
+        for (var newName in popupsToRender) {
             if (newName.search("-") !== -1) {
-                $log.error('The marker can\'t use a "-" on his key name: "' + newName + '".');
+                $log.error('The popup can\'t use a "-" on his key name: "' + newName + '".');
                 continue;
             }
 
-            if (!isDefined(leafletMarkers[newName])) {
-                var markerData = markersToRender[newName];
-                var marker = createMarker(markerData);
-                if (!isDefined(marker)) {
+            if (!isDefined(leafletPopups[newName])) {
+                var popupModel = popupsToRender[newName];
+                var popup = createMarker(popupModel);
+                if (!isDefined(popup)) {
                     $log.error(errorHeader + ' Received invalid data on the marker ' + newName + '.');
                     continue;
                 }
-                leafletMarkers[newName] = marker;
+                leafletPopups[newName] = popup;
 
                 // Bind message
-                if (isDefined(markerData.message)) {
-                    marker.bindPopup(markerData.message, markerData.popupOptions);
+                if (isDefined(popupModel.message)) {
+                    popup.bindPopup(popupModel.message, popupModel.popupOptions);
                 }
 
                 // Add the marker to a cluster group if needed
-                if (isDefined(markerData.group)) {
-                    var groupOptions = isDefined(markerData.groupOption) ? markerData.groupOption : null;
-                    addMarkerToGroup(marker, markerData.group, groupOptions, map);
+                if (isDefined(popupModel.group)) {
+                    var groupOptions = isDefined(popupModel.groupOption) ? popupModel.groupOption : null;
+                    addMarkerToGroup(popup, popupModel.group, groupOptions, map);
                 }
 
                 // Show label if defined
-                if (Helpers.LabelPlugin.isLoaded() && isDefined(markerData.label) && isDefined(markerData.label.message)) {
-                    marker.bindLabel(markerData.label.message, markerData.label.options);
+                if (Helpers.LabelPlugin.isLoaded() && isDefined(popupModel.label) && isDefined(popupModel.label.message)) {
+                    popup.bindLabel(popupModel.label.message, popupModel.label.options);
                 }
 
                 // Check if the marker should be added to a layer
-                if (isDefined(markerData) && (isDefined(markerData.layer) || isDefined(maybeLayerName))){
+                if (isDefined(popupModel) && (isDefined(popupModel.layer) || isDefined(maybeLayerName))){
 
-                    var pass = _maybeAddMarkerToLayer(
-                        markerData.layer || maybeLayerName, //original way takes pref
+                    var pass = _maybeAddToLayer(
+                        popupModel.layer || maybeLayerName, //original way takes pref
                         layers,
-                        markerData, marker, shouldWatch, map
+                        popupModel, popup, shouldWatch, map
                     );
                     if(!pass)
                         continue; //something went wrong move on in the loop
-                } else if (!isDefined(markerData.group)) {
+                } else if (!isDefined(popupModel.group)) {
                     // We do not have a layer attr, so the marker goes to the map layer
-                    map.addLayer(marker);
-                    if (!shouldWatch && markerData.focus === true) {
-                        leafletMarkersHelpers.manageOpenPopup(marker, markerData);
+                    map.addLayer(popup);
+                    if (!shouldWatch && popupModel.focus === true) {
+                        leafletPopupsHelpers.manageOpenPopup(popup, popupModel);
                     }
                 }
                 var pathToMarker = Helpers.getObjectDotPath(maybeLayerName? [maybeLayerName, newName]: [newName]);
                 if (shouldWatch) {
-                    addMarkerWatcher(marker, pathToMarker, leafletScope, layers, map);
+                    addMarkerWatcher(popup, pathToMarker, leafletScope, layers, map);
                 }
 
-                listenMarkerEvents(marker, markerData, leafletScope, shouldWatch);
-                bindMarkerEvents(marker, pathToMarker, markerData, leafletScope);
+                listenMarkerEvents(popup, popupModel, leafletScope, shouldWatch);
+                bindMarkerEvents(popup, pathToMarker, popupModel, leafletScope);
             }
         }
     };
-    var _destroy = function(markerModels, lMarkers, map, layers){
-        // Delete markers from the array
+    var _destroy = function(popupModels, lPopups, map, layers){
         var hasLogged = false;
-        for (var name in lMarkers) {
+        for (var name in lPopups) {
             if(!hasLogged) {
-                $log.debug(errorHeader + "[markers] destroy: ");
+                $log.debug(errorHeader + "[popups] destroy: ");
                 hasLogged = true;
             }
-            if (!isDefined(markerModels) || !isDefined(markerModels[name])) {
-                deleteMarker(lMarkers[name], map, layers);
-                delete lMarkers[name];
+            if (!isDefined(popupModels) || !isDefined(popupModels[name])) {
+                deleteMarker(lPopups[name], map, layers);
+                delete lPopups[name];
             }
         }
     };
@@ -135,7 +136,7 @@ angular.module("leaflet-directive").directive('markers',
                 leafletScope  = mapController.getLeafletScope();
 
             mapController.getMap().then(function(map) {
-                var leafletMarkers = {}, getLayers;
+                var leafletPopups = {}, getLayers;
 
                 // If the layers attribute is used, we must wait until the layers are created
                 if (isDefined(controller[1])) {
@@ -149,20 +150,25 @@ angular.module("leaflet-directive").directive('markers',
                 }
 
                 getLayers().then(function(layers) {
-                    leafletData.setMarkers(leafletMarkers, attrs.id);
-                    leafletScope.$watch('markers', function(newMarkers) {
-                        _destroy(newMarkers, leafletMarkers, map, layers);
+                    leafletData.setPopups(leafletPopups, attrs.id);
+                    leafletScope.$watch('popups', function(newPopups) {
+                        _destroy(newPopups, leafletPopups, map, layers);
                         // Should we watch for every specific marker on the map?
-                        var shouldWatch = (!isDefined(attrs.watchMarkers) || Helpers.isTruthy(attrs.watchMarkers));
-                        var isNested = (isDefined(attrs.markersNested) && Helpers.isTruthy(attrs.markersNested));
+                        var shouldWatch =
+                          (!isDefined(attrs.watchMarkers) ||
+                            Helpers.isTruthy(attrs.watchMarkers));
+
+                        var isNested = (isDefined(attrs.markersNested) &&
+                          Helpers.isTruthy(attrs.markersNested));
 
                         if(isNested) {
-                            $it.each(newMarkers, function(markersToAdd, layerName) {
-                                _addMarkers(markersToAdd, map, layers, leafletMarkers, leafletScope, shouldWatch, layerName);
+                            $it.each(newPopups, function(popupsToAdd, layerName) {
+                                _add(popupsToAdd, map, layers, leafletPopups,
+                                  leafletScope, shouldWatch, layerName);
                             });
                             return;
                         }
-                        _addMarkers(newMarkers, map, layers, leafletMarkers, leafletScope, shouldWatch);
+                        _add(newPopups, map, layers, leafletPopups, leafletScope, shouldWatch);
                     }, true);
                 });
             });

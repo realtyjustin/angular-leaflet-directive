@@ -8,6 +8,7 @@ angular.module("leaflet-directive").service('leafletData', function ($log, $q, l
     var layers = {};
     var paths = {};
     var markers = {};
+    var popups = {};
     var geoJSON = {};
     var utfGrid = {};
     var decorations = {};
@@ -30,6 +31,7 @@ angular.module("leaflet-directive").service('leafletData', function ($log, $q, l
         layers[id] = undefined;
         paths[id] = undefined;
         markers[id] = undefined;
+        popups[id] = undefined;
         geoJSON[id] = undefined;
         utfGrid[id] = undefined;
         decorations[id] = undefined;
@@ -55,6 +57,17 @@ angular.module("leaflet-directive").service('leafletData', function ($log, $q, l
         var defer = getUnresolvedDefer(markers, scopeId);
         defer.resolve(leafletMarkers);
         setResolvedDefer(markers, scopeId);
+    };
+
+    this.getPopups = function(scopeId) {
+        var defer = getDefer(popups, scopeId);
+        return defer.promise;
+    };
+
+    this.setPopups = function(leafletPopups, scopeId) {
+        var defer = getUnresolvedDefer(popups, scopeId);
+        defer.resolve(leafletPopups);
+        setResolvedDefer(popups, scopeId);
     };
 
     this.getLayers = function(scopeId) {

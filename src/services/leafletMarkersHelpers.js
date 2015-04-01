@@ -250,7 +250,7 @@ angular.module("leaflet-directive")
             });
         },
 
-        addMarkerWatcher: function(marker, name, leafletScope, layers, map) {
+        addWatcher: function(marker, name, leafletScope, layers, map) {
             var markerWatchPath = Helpers.getObjectArrayPath("markers." + name);
             var clearWatch = leafletScope.$watch(markerWatchPath, function(markerData, oldMarkerData) {
                 if (!isDefined(markerData)) {

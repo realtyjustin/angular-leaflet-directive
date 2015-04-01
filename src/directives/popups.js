@@ -8,12 +8,12 @@ angular.module("leaflet-directive").directive('popups',
         defaultTo= leafletHelpers.defaultTo,
         Helpers = leafletHelpers,
         isString = leafletHelpers.isString,
-        addMarkerWatcher = leafletPopupsHelpers.addMarkerWatcher,
-        listenMarkerEvents = leafletPopupsHelpers.listenMarkerEvents,
-        addMarkerToGroup = leafletPopupsHelpers.addMarkerToGroup,
-        bindMarkerEvents = leafletEvents.bindMarkerEvents,
-        createMarker = leafletPopupsHelpers.createMarker,
-        deleteMarker = leafletPopupsHelpers.deleteMarker,
+        addWatcher = leafletPopupsHelpers.addWatcher,
+        listenEvents = leafletPopupsHelpers.listenEvents,
+        addToGroup = leafletPopupsHelpers.addToGroup,
+        bindEvents = leafletEvents.bindEvents,
+        create = leafletPopupsHelpers.create,
+        remove = leafletPopupsHelpers.remove,
         $it = leafletIterators;
 
     var _maybeAddToLayer = function(layerName, layers, popupModel, marker, shouldWatch, map){
@@ -61,7 +61,8 @@ angular.module("leaflet-directive").directive('popups',
 
             if (!isDefined(leafletPopups[newName])) {
                 var popupModel = popupsToRender[newName];
-                var popup = createMarker(popupModel);
+                var content = '';
+                var popup = create(popupModel, content);
                 if (!isDefined(popup)) {
                     $log.error(errorHeader + ' Received invalid data on the marker ' + newName + '.');
                     continue;
@@ -76,7 +77,7 @@ angular.module("leaflet-directive").directive('popups',
                 // Add the marker to a cluster group if needed
                 if (isDefined(popupModel.group)) {
                     var groupOptions = isDefined(popupModel.groupOption) ? popupModel.groupOption : null;
-                    addMarkerToGroup(popup, popupModel.group, groupOptions, map);
+                    addToGroup(popup, popupModel.group, groupOptions, map);
                 }
 
                 // Show label if defined
@@ -103,11 +104,11 @@ angular.module("leaflet-directive").directive('popups',
                 }
                 var pathToMarker = Helpers.getObjectDotPath(maybeLayerName? [maybeLayerName, newName]: [newName]);
                 if (shouldWatch) {
-                    addMarkerWatcher(popup, pathToMarker, leafletScope, layers, map);
+                    addWatcher(popup, pathToMarker, leafletScope, layers, map);
                 }
 
-                listenMarkerEvents(popup, popupModel, leafletScope, shouldWatch);
-                bindMarkerEvents(popup, pathToMarker, popupModel, leafletScope);
+                listenEvents(popup, popupModel, leafletScope, shouldWatch);
+                bindEvents(popup, pathToMarker, popupModel, leafletScope);
             }
         }
     };
@@ -119,7 +120,7 @@ angular.module("leaflet-directive").directive('popups',
                 hasLogged = true;
             }
             if (!isDefined(popupModels) || !isDefined(popupModels[name])) {
-                deleteMarker(lPopups[name], map, layers);
+                remove(lPopups[name], map, layers);
                 delete lPopups[name];
             }
         }
